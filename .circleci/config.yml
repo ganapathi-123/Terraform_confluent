@@ -1,26 +1,40 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/2.0/configuration-reference
-version: 2.1
-
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+version: '2.1'
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+  createartifact:
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+      - image: circleci/node:4.8.2
     steps:
       - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
-
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+      - run: echo "My artifact file" 
+      - run: mkdir -p my_workspace
+      - run: echo "Trying to write in my workspace" > my_workspace/echooutput
+      - persist_to_workspace:
+          root: my_workspace
+          paths: 
+            - echooutput
+  updateartifact:
+    docker:
+      - image: circleci/node:4.8.2
+    steps:
+      - checkout
+      - attach_wokspace:
+          at: my_workspace
+      - run: |
+          if [[ $( cat my_workspace/echooutput) == "Trying to write in my workspace" ]]  
+            echo "It worked"
+          else
+            echo "Nope:" exit 1
+          fi
+#            >  ./artifact-1
+#            mkdir /artifacts;
+#            echo "My artifact file2 in a dir" > /artifacts/artifact-2;
+#orbs:
+#  terraform: circleci/terraform@3.2.0
 workflows:
-  say-hello-workflow:
+  version: '2.1'
+  deploy_confluent_topics:
     jobs:
-      - say-hello
+      - createartifact
+      - updateartifact:
+          requires:
+            - createartifact
